@@ -1,0 +1,12 @@
+---
+    cassandra_repo_uri: https://www.apache.org/dist/cassandra/redhat/311x/
+
+    required_centos_pkgs:
+      - java
+    target_centos_pkgs:
+      - cassandra
+
+    cassandra_cluster_name: []
+    cassandra_seed_list: []
+
+    cassandra_data_dir: "/var/lib/cassandra"

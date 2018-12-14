@@ -1,0 +1,88 @@
+---
+
+    - name: Set default cluster name if it needs to
+      set_fact:
+        cassandra_cluster_name: "testcluster"
+      when: cassandra_cluster_name == "" or cassandra_cluster_name is undefined
+
+    - name: Set default seed IPs if it needs to
+      set_fact:
+        cassandra_seed_list: "{{ansible_default_ipv4.address}}"
+      when: cassandra_seed_list == "" or cassandra_seed_list is undefined
+
+    - name: Add Cassandra repo
+      yum_repository:
+        name: datastax
+        description: "Cassandra DataStax repo"
+        baseurl: "{{cassandra_repo_uri}}"
+        gpgcheck: yes
+        gpgkey: https://www.apache.org/dist/cassandra/KEYS
+
+    - name: Install required packages and useful tools
+      yum: pkg={{ item }} state=installed update_cache=true
+      with_items:
+        - "{{ required_centos_pkgs }}"
+
+    - name: Install Cassandra packages
+      yum: pkg={{ item }} state=installed update_cache=true
+      with_items:
+        - "{{ target_centos_pkgs }}"
+
+    - name: Stop Cassandra service
+      service: name="cassandra" state="stopped"
+
+    - name: Clean old Cassandra configurations
+      file:
+        path: /etc/cassandra/conf/cassandra.yaml
+        state: absent
+
+    - name: Clean old Cassandra data folder
+      file:
+        path: /var/lib/cassandra/data/system
+        state: absent
+
+
+    - name: Re-create Cassandra data folder
+      file:
+        path: /var/lib/cassandra
+        state: directory
+        owner: cassandra
+        group: cassandra
+
+    - name: Re-create Cassandra system sub-folder
+      file:
+        path: /var/lib/cassandra/data/system
+        state: directory
+        owner: cassandra
+        group: cassandra
+
+    - name: Re-create Cassandra hints folder
+      file:
+        path: /hints
+        state: directory
+        owner: cassandra
+        group: cassandra
+
+    - name: Configure Cassandra service
+      template:
+        src: cassandra.yml.j2
+        dest: /etc/cassandra/conf/cassandra.yaml
+
+    - name: Start Cassandra service
+      service: name="cassandra" state="restarted" enabled="yes"
+
+    - name: Wait for Cassandra first start
+      pause:
+        seconds: 60
+        prompt: "Waiting..."
+
+    - name: Test Cassandra service
+      command: nodetool status
+      register: nodetool_status
+      retries: 20
+      delay: 5
+      ignore_errors: yes
+
+    - name: Сheck test results
+      fail: msg="Cassandra cluster in invalid state!"
+      failed_when: nodetool_status.rc != 0
