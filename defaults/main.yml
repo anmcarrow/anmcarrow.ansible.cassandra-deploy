@@ -6,7 +6,7 @@
     target_centos_pkgs:
       - cassandra
 
-    cassandra_cluster_name: []
-    cassandra_seed_list: []
+    cassandra_cluster_name: ""
+    cassandra_seed_list: ""
 
     cassandra_data_dir: "/var/lib/cassandra"
